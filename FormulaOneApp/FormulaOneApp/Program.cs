@@ -1,3 +1,4 @@
+using FormulaOneApp.Configurations;
 using FormulaOneApp.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,8 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig")); // Make Secrets available into DI container as instance of JwtConfig object
 
 var app = builder.Build();
 
