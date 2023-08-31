@@ -6,3 +6,5 @@
 /FormulaOneApp/FormulaOneApp/obj
 /FormulaOneApp/FormulaOneApp/bin/Debug/net6.0
 /FormulaOneApp/.vs/ProjectEvaluation
+*.db-shm
+*.db-wal
