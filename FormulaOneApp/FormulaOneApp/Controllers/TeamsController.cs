@@ -1,5 +1,7 @@
-﻿using FormulaOneApp.Models;
+﻿using FormulaOneApp.Data;
+using FormulaOneApp.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FormulaOneApp.Controllers
 {
@@ -9,44 +11,27 @@ namespace FormulaOneApp.Controllers
     public class TeamsController : ControllerBase // Lightweight controller without view support
     {
 
-        private static List<Team> teams = new List<Team>()
-        {
-            new Team
-            {
-                Id = 1,
-                Name = "Marcedes",
-                Country = "Germany",
-                TeamPrinciple = "Toto Wolf"
+        private readonly AppDbContext _context;
 
-            },
-            new Team
-            {
-                Id= 2,
-                Name = "Ferrari",
-                Country = "Italy",
-                TeamPrinciple = "Mattia Bonitto"
-            },
-            new Team
-            {
-                Id = 3,
-                Name = "Alfa Romeo",
-                Country = "Swiss",
-                TeamPrinciple = "Fredric Vasseur"
-            }
-        };
+        public TeamsController(AppDbContext context)
+        {
+            this._context = context;
+        }
 
         [HttpGet]
         //[Route("GetBestTeam")] hard codeded endpoint name so api/Team/GetBestTeam
         // current api/Team
-        public IActionResult Get()
+        public async Task<IActionResult> Get()
         {
+            var teams = await _context.Teams.ToListAsync();
+
             return Ok(teams);
         }
 
         [HttpGet(template:"{id:int}")] // This http get is expecting an id parameter of type int
-        public IActionResult Get(int id) 
+        public async Task<IActionResult> Get(int id) 
         {
-            var team = teams.FirstOrDefault(x => x.Id == id);
+            var team = await _context.Teams.FirstOrDefaultAsync(x => x.Id == id);
             if(team == null)
             {
                 return BadRequest("Bad Id");
@@ -56,9 +41,10 @@ namespace FormulaOneApp.Controllers
 
 
         [HttpPost]
-        public IActionResult Post(Team team)
+        public async Task<IActionResult> Post(Team team)
         {
-            teams.Add(team);
+            await _context.Teams.AddAsync(team);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction("Get",routeValues:team.Id,team);
             //For add item we return 201 created with a route to access that item
@@ -68,9 +54,9 @@ namespace FormulaOneApp.Controllers
         //http patch for single property change or partial update of the object
 
         [HttpPatch]
-        public IActionResult Patch(int id, string country)
+        public async Task<IActionResult> Patch(int id, string country)
         {
-            var team = teams.FirstOrDefault(team => team.Id == id);
+            var team = await _context.Teams.FirstOrDefaultAsync(team => team.Id == id);
 
             if(team == null)
             {
@@ -78,23 +64,24 @@ namespace FormulaOneApp.Controllers
             }
 
             team.Country = country;
+            await _context.SaveChangesAsync();
             return NoContent();
             //With patch we return a 204 with no content
 
         }
 
         [HttpDelete]
-        public IActionResult Delete(int id) 
+        public async Task<IActionResult> Delete(int id) 
         {
-            var team = teams.FirstOrDefault(team => team.Id == id);
+            var team = await  _context.Teams.FirstOrDefaultAsync(team => team.Id == id);
 
             if (team == null)
             {
                 return BadRequest("Invalid Id");
             }
 
-            teams.Remove(team);
-
+            _context.Teams.Remove(team);
+            await _context.SaveChangesAsync();
             return NoContent();
             //With delete we return a 204 with no content
 
