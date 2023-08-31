@@ -9,9 +9,9 @@ namespace FormulaOneApp.Controllers
     public class TeamsController : ControllerBase // Lightweight controller without view support
     {
 
-        private List<Teams> teams = new List<Teams>()
+        private static List<Team> teams = new List<Team>()
         {
-            new Teams
+            new Team
             {
                 Id = 1,
                 Name = "Marcedes",
@@ -19,14 +19,14 @@ namespace FormulaOneApp.Controllers
                 TeamPrinciple = "Toto Wolf"
 
             },
-            new Teams
+            new Team
             {
                 Id= 2,
                 Name = "Ferrari",
                 Country = "Italy",
                 TeamPrinciple = "Mattia Bonitto"
             },
-            new Teams
+            new Team
             {
                 Id = 3,
                 Name = "Alfa Romeo",
@@ -52,6 +52,52 @@ namespace FormulaOneApp.Controllers
                 return BadRequest("Bad Id");
             }
             return Ok(team);
+        }
+
+
+        [HttpPost]
+        public IActionResult Post(Team team)
+        {
+            teams.Add(team);
+
+            return CreatedAtAction("Get",routeValues:team.Id,team);
+            //For add item we return 201 created with a route to access that item
+        }
+
+        //http put for full fledged update 
+        //http patch for single property change or partial update of the object
+
+        [HttpPatch]
+        public IActionResult Patch(int id, string country)
+        {
+            var team = teams.FirstOrDefault(team => team.Id == id);
+
+            if(team == null)
+            {
+                return BadRequest("Invalid Id");
+            }
+
+            team.Country = country;
+            return NoContent();
+            //With patch we return a 204 with no content
+
+        }
+
+        [HttpDelete]
+        public IActionResult Delete(int id) 
+        {
+            var team = teams.FirstOrDefault(team => team.Id == id);
+
+            if (team == null)
+            {
+                return BadRequest("Invalid Id");
+            }
+
+            teams.Remove(team);
+
+            return NoContent();
+            //With delete we return a 204 with no content
+
         }
     }
 }
