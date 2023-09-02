@@ -58,7 +58,7 @@ namespace FormulaOneApp.Controllers
                     UserName = requestDto.Email,
                 };
 
-                var is_created = await _userManager.CreateAsync(new_user);
+                var is_created = await _userManager.CreateAsync(new_user,requestDto.Password);
 
                 if(is_created.Succeeded)
                 {
@@ -87,6 +87,61 @@ namespace FormulaOneApp.Controllers
 
             return BadRequest("Invalid Credentials");
         }
+
+        [HttpPost]
+        [Route("Login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequestDto)
+        {
+            if (ModelState.IsValid)
+            {
+                //check if user exist
+                var existing_user = await _userManager.FindByEmailAsync(loginRequestDto.Email);
+                if (existing_user == null) 
+                {
+                    return BadRequest(new AuthResult()
+                    {
+                        Result = false,
+                        Errors = new List<string>()
+                        {
+                            "Invalid PAyload"
+                        }
+                    });
+                }
+
+                var isCorrect = await _userManager.CheckPasswordAsync(existing_user, loginRequestDto.Password);
+
+                if (!isCorrect)
+                {
+                    return BadRequest(new AuthResult()
+                    {
+                        Result = false,
+                        Errors = new List<string>()
+                        {
+                            "Invalid credentials"
+                        }
+                    });
+                }
+
+                var jwtToken = GenerateToken(existing_user);
+
+                return Ok(new AuthResult()
+                {
+                    Token = jwtToken,
+                    Result = true
+                });
+
+            }
+
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>()
+                {
+                    "Invalid PAyload"
+                }
+            });
+        }
+
 
         private string GenerateToken(IdentityUser user) 
         {
