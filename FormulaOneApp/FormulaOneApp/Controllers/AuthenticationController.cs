@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using RestSharp;
+using RestSharp.Authenticators;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -19,15 +21,18 @@ namespace FormulaOneApp.Controllers
         // Ad uw inherit out appDbContex from IdentityDbContext and we add AppDbContext to the DI 
         // All the Identity Related classes like UserMAnager are alredy added to the DI
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IConfiguration configuration;
         private readonly JwtConfig _jwtConfig;
 
         public AuthenticationController(
             UserManager<IdentityUser> userManager,
-            IOptionsMonitor<JwtConfig> optionsMonitor)
+            IOptionsMonitor<JwtConfig> optionsMonitor,
+            IConfiguration configuration)
         {
             //Initializing through DI
             _jwtConfig = optionsMonitor.CurrentValue;
             _userManager = userManager;
+            this.configuration = configuration;
         }
 
         [HttpPost]
@@ -56,20 +61,36 @@ namespace FormulaOneApp.Controllers
                 {
                     Email = requestDto.Email,
                     UserName = requestDto.Email,
+                    EmailConfirmed = false
                 };
 
                 var is_created = await _userManager.CreateAsync(new_user,requestDto.Password);
 
-                if(is_created.Succeeded)
+                if (is_created.Succeeded)
                 {
                     //Generate Tokens
-                    var token = GenerateToken(new_user);
+                    //var token = GenerateToken(new_user);
 
-                    return Ok(new AuthResult()
-                    {
-                        Result = true,
-                        Token = token
-                    });
+                    //return Ok(new AuthResult()
+                    //{
+                    //    Result = true,
+                    //    Token = token
+                    //});
+
+                    //getting the code unique to the user for email confirmation
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(new_user);
+
+                    var email_body = "Please confirm email <a href=\"#URL#\"> Click here </a>";
+
+                    // https://localhost:8080/authentication/verifyemail/userid=sdas&code=dasdasd
+                    var callbackURL = Request.Scheme + "://" + Request.Host + Url.Action("ConfirmEmail", "Authentication", new { userId = new_user.Id, code = code });
+
+                    var body = email_body.Replace("#URL#", System.Text.Encodings.Web.HtmlEncoder.Default.Encode(callbackURL));
+
+                    //Send email
+                    var result = sendEmail(body, callbackURL);
+
+                    return Ok("Please verify your email through verification email");
                 }
                 else
                 {
@@ -108,6 +129,19 @@ namespace FormulaOneApp.Controllers
                     });
                 }
 
+                if(existing_user.EmailConfirmed == false)
+                {
+                    return BadRequest(new AuthResult()
+                    {
+                        Result = false,
+                        Errors = new List<string>()
+                        {
+                            "Email need to be confirmed"
+                        }
+                    });
+                }
+
+
                 var isCorrect = await _userManager.CheckPasswordAsync(existing_user, loginRequestDto.Password);
 
                 if (!isCorrect)
@@ -140,6 +174,42 @@ namespace FormulaOneApp.Controllers
                     "Invalid PAyload"
                 }
             });
+        }
+
+        [Route("ConfirmEmail")]
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(string userId,string code)
+        {
+            if(userId == null || code == null)
+            {
+                return BadRequest(new AuthResult()
+                {
+                    Result = false,
+                    Errors = new List<string>()
+                    {
+                        "Invalid email conf url"
+                    }
+                });
+            }
+            var user = await _userManager.FindByIdAsync(userId);
+            if(user == null)
+            {
+                return BadRequest(new AuthResult()
+                {
+                    Result = false,
+                    Errors = new List<string>()
+                    {
+                        "Invalid email parameters"
+                    }
+                });
+            }
+
+            //code = Encoding.UTF8.GetString(Convert.FromBase64String(code));
+            var result = _userManager.ConfirmEmailAsync(user, code);
+
+            var status = result.IsCompletedSuccessfully ? "Email confirmed" : "Not confirmed try again";
+
+            return Ok(status);
         }
 
 
@@ -179,6 +249,26 @@ namespace FormulaOneApp.Controllers
 
 
             return jwtToken;
+        }
+
+
+        private bool sendEmail(string body,string email)
+        {
+            //create a api client
+            var client = new RestClient("https://api.mailgun.net/v3");
+            var request = new RestRequest("",Method.Post);
+
+            client.Authenticator =
+                new HttpBasicAuthenticator("api",
+                                            configuration.GetSection("EmailConfig:API_KEY").Value);
+            request.AddParameter("domain", "sandbox74fe290e83d94e1694b2c46d00a450ad.mailgun.org");
+            request.Resource = "{domain}/messages";
+            request.AddParameter("from", "New User <mailgun@sandbox74fe290e83d94e1694b2c46d00a450ad.mailgun.org>");
+            request.AddParameter("to", "kajoge6106@trazeco.com");
+            request.AddParameter("subject", "This is a email verification");
+            request.AddParameter("text", body);
+            var response = client.Execute(request);
+            return response.IsSuccessful;
         }
 
     }
