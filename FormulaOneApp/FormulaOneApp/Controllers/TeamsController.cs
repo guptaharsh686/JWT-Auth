@@ -1,10 +1,15 @@
 ﻿using FormulaOneApp.Data;
 using FormulaOneApp.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FormulaOneApp.Controllers
 {
+    // all the routs to this controller will be authenticated through jwt bearer scheme
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
     [ApiController] // To make api behavior and functionalities available to us out of the box
     [Route("api/[controller]")] // api/teams dynamically configure route according to controller name
     //[Route("api/teams")] hard coding the route whatever be the name of the controller
