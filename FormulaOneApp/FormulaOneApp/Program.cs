@@ -1,6 +1,7 @@
 using FormulaOneApp.Configurations;
 using FormulaOneApp.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -8,6 +9,9 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig")); // Make Secrets available into DI container as instance of JwtConfig object
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -19,7 +23,6 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig")); // Make Secrets available into DI container as instance of JwtConfig object
 
 builder.Services.AddAuthentication(options =>
 {
@@ -53,6 +56,13 @@ builder.Services.AddAuthentication(options =>
         };
 
     });
+
+//Add default identity manager as identity user
+builder.Services.AddDefaultIdentity<IdentityUser>(opt =>
+{
+    opt.SignIn.RequireConfirmedAccount = false;
+})
+    .AddEntityFrameworkStores<AppDbContext>();
 
 var app = builder.Build();
 
