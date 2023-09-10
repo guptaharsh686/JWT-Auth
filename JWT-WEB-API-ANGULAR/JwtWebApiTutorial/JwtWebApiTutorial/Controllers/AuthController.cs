@@ -71,7 +71,62 @@ namespace JwtWebApiTutorial.Controllers
 
             string token = CreateToken(user);
 
+
+            var refreshToken = generateRefreshToken();
+
+            //set as a http only cookie
+            setRefreshToken(refreshToken);
+
             return Ok(token);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<string>> GetNewJWTTokenWithRefreshToken()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (!user.RefreshToken.Equals(refreshToken))
+            {
+                return Unauthorized("Invalid Refresh Token");
+            }
+            else if(user.TokenExpires < DateTime.UtcNow)
+            {
+                return Unauthorized("Token Expired");
+            }
+
+            string token = CreateToken(user);
+
+            var newRefreshToken = generateRefreshToken();
+            setRefreshToken(newRefreshToken);
+
+            return Ok(token);
+        }
+
+        private void setRefreshToken(RefreshToken refreshToken)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = refreshToken.Expires,
+            };
+            Response.Cookies.Append("refreshToken",refreshToken.Token, cookieOptions);
+
+            user.RefreshToken = refreshToken.Token;
+            user.TokenCreated = refreshToken.Created;
+            user.TokenExpires = refreshToken.Expires;
+
+        }
+
+        private RefreshToken generateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
+            };
+
+            return refreshToken;
         }
 
         private string CreateToken(User user)
