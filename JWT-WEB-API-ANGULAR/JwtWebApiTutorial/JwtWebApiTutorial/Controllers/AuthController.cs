@@ -1,4 +1,6 @@
 ﻿using JwtWebApiTutorial.Models;
+using JwtWebApiTutorial.Services.UserService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,12 +15,33 @@ namespace JwtWebApiTutorial.Controllers
     {
         public static User user = new User();
         private IConfiguration _config;
+        private readonly IUserService userService;
 
-        public AuthController(IConfiguration configuration)
+        public AuthController(IConfiguration configuration,IUserService userService)
         {
             _config = configuration;
+            this.userService = userService;
         }
+        //[HttpGet,Authorize]
+        //public ActionResult<Object> GetMe()
+        //{
+        //    //getting info from http context
+        //    var username = User.Identity.Name;
+        //    var username2 = User.FindFirstValue(ClaimTypes.Name);
+        //    var role = User.FindFirstValue(ClaimTypes.Role);
+        //    return Ok(new {username,username2,role});
+        //} shortcut way
 
+        [HttpGet, Authorize]
+        public ActionResult<string> GetMe()
+        {
+            //getting info from http context which is alreader available beacause of ControllerBase
+            //this only works with authorize attribute
+            var username = userService.getMyName();
+            //var username2 = User.FindFirstValue(ClaimTypes.Name);
+            //var role = User.FindFirstValue(ClaimTypes.Role);
+            return Ok(username);
+        }
 
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register(UserDto request)
