@@ -8,3 +8,6 @@
 /FormulaOneApp/.vs/ProjectEvaluation
 *.db-shm
 *.db-wal
+/JWT-WEB-API-ANGULAR/JwtWebApiTutorial/.vs/JwtWebApiTutorial
+/JWT-WEB-API-ANGULAR/JwtWebApiTutorial/JwtWebApiTutorial/bin/Debug/net6.0
+/JWT-WEB-API-ANGULAR/JwtWebApiTutorial/JwtWebApiTutorial/obj
